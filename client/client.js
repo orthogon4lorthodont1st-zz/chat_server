@@ -1,19 +1,28 @@
-const net = require('net');
+'use strict';
+
+const WebSocket = require('ws');
 const readline = require('readline');
 
-const client = new net.Socket();
-
-process.stdout.setEncoding('utf8');
-
+let ws = new ReconnectingWebSocket('ws://localhost:3000');
+let interval;
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   terminal: false,
 });
 
+function attemptReconnect() {
+  interval = setInterval(() => {
+    console.log('Attempting to reconnect... \n');
+    ws = new WebSocket('ws://localhost:3000');
+    ws.on('error', err => {
+      console.log('err', err);
+    });
+  }, 1000);
+}
+
 function init() {
   rl.question('Please provide a username: ', answer => {
-    client.write(answer);
     rl.setPrompt(`${answer}: `);
     rl.prompt();
     rl.close();
@@ -21,30 +30,26 @@ function init() {
 }
 
 function operations() {
-  client.on('data', data => {
-    process.stdout.write(data);
+  ws.on('open', () => {
+    if (interval) {
+      clearInterval(interval);
+    }
+    console.log('Connection established');
+    ws.send('something');
   });
 
-  client.on('close', () => {
-    process.stdout.write('Connection closed \n');
+  ws.on('message', data => {
+    console.log(`${data}\n`);
   });
 
-  client.on('error', err => {
-    process.stdout.write(`err: ${err} \n`);
-    process.stdout.write('Server is offline');
+  ws.on('close', () => {
+    console.log('Server is offline \n');
+    attemptReconnect();
   });
 }
 
 function main() {
-  client.connect(
-    3000,
-    '127.0.0.1',
-    () => {
-      process.stdout.write('Connection established \n');
-      init();
-    },
-  );
-
+  init();
   operations();
 }
 

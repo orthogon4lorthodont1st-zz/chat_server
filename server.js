@@ -1,49 +1,23 @@
-const { createServer } = require('net');
+'use strict';
 
-const server = createServer();
+const express = require('express');
+const SocketServer = require('ws').Server;
 
-let numConnected = 0;
-const sockets = {};
-process.stdout.setEncoding('utf8');
+const PORT = process.env.PORT || 3000;
 
-function broadcast(socket, message) {
-  process.stdout('bc');
-  Object.entries(sockets).forEach(([key, currSock]) => {
-    if (parseFloat(key) !== socket.id) {
-      currSock.write(message);
-    }
-  });
-}
+const server = express().listen(PORT, () =>
+  console.log(`Listening on ${PORT}`),
+);
 
-function addSocket(socket, data) {
-  socket.name = data.toString().trim();
-  sockets[socket.id] = socket;
-}
+const wss = new SocketServer({ server });
 
-server.on('connection', socket => {
-  numConnected += 1;
-  socket.id = numConnected;
-
-  socket.on('data', data => {
-    process.stdout.write(data);
-    if (!sockets[socket.id]) {
-      process.stdout.write('inside ifnot \n');
-      addSocket(socket, data);
-      return;
-    }
-
-    const message = `${socket.name}: ${data} `;
-    broadcast(socket, message);
-  });
-
-  socket.on('end', () => {
-    delete sockets[socket.id];
-
-    const message = `${socket.name}: has left`;
-    broadcast(socket, message);
-  });
+wss.on('connection', ws => {
+  console.log('Client connected');
+  ws.on('close', () => console.log('Client disconnected'));
 });
 
-server.listen(3000, () => {
-  process.stdout.write('Server has started \n');
-});
+setInterval(() => {
+  wss.clients.forEach(client => {
+    client.send(new Date().toTimeString());
+  });
+}, 1000);

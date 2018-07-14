@@ -6,12 +6,13 @@ module.exports = class WebSocketClient {
   constructor(url) {
     this.autoReconnectInterval = 2 * 1000; // ms
     this.url = url;
-    this.instance = new WebSocket(this.url);
   }
 
   open() {
+    this.instance = new WebSocket(this.url);
+
     this.instance.on('open', () => {
-      console.log('WebSocketClient: open');
+      this.onopen();
     });
 
     this.instance.on('message', data => {
@@ -19,7 +20,6 @@ module.exports = class WebSocketClient {
     });
 
     this.instance.on('close', e => {
-      console.log('WebSocketClient: closed');
       switch (e.code) {
         case 1000: // CLOSE_NORMAL
           console.log('WebSocket: closed');
@@ -57,7 +57,7 @@ module.exports = class WebSocketClient {
     const that = this;
     setTimeout(() => {
       console.log('WebSocketClient: reconnecting...');
-      that.open(that.url);
+      this.open(this.url);
     }, this.autoReconnectInterval);
   }
 };

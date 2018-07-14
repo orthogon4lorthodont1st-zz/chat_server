@@ -1,56 +1,63 @@
 'use strict';
 
 const WebSocket = require('ws');
-const readline = require('readline');
 
-let ws = new ReconnectingWebSocket('ws://localhost:3000');
-let interval;
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  terminal: false,
-});
+module.exports = class WebSocketClient {
+  constructor(url) {
+    this.autoReconnectInterval = 2 * 1000; // ms
+    this.url = url;
+    this.instance = new WebSocket(this.url);
+  }
 
-function attemptReconnect() {
-  interval = setInterval(() => {
-    console.log('Attempting to reconnect... \n');
-    ws = new WebSocket('ws://localhost:3000');
-    ws.on('error', err => {
-      console.log('err', err);
+  open() {
+    this.instance.on('open', () => {
+      console.log('WebSocketClient: open');
     });
-  }, 1000);
-}
 
-function init() {
-  rl.question('Please provide a username: ', answer => {
-    rl.setPrompt(`${answer}: `);
-    rl.prompt();
-    rl.close();
-  });
-}
+    this.instance.on('message', data => {
+      console.log(data);
+    });
 
-function operations() {
-  ws.on('open', () => {
-    if (interval) {
-      clearInterval(interval);
+    this.instance.on('close', e => {
+      console.log('WebSocketClient: closed');
+      switch (e.code) {
+        case 1000: // CLOSE_NORMAL
+          console.log('WebSocket: closed');
+          break;
+        default:
+          // Abnormal closure
+          this.reconnect(e);
+          break;
+      }
+    });
+
+    this.instance.on('error', e => {
+      switch (e.code) {
+        case 'ECONNREFUSED':
+          this.reconnect(e);
+          break;
+        default:
+          console.log('WebSocketClient: error');
+          break;
+      }
+    });
+  }
+
+  send(data) {
+    try {
+      this.instance.send(data);
+    } catch (e) {
+      this.instance.emit('error', e);
     }
-    console.log('Connection established');
-    ws.send('something');
-  });
+  }
 
-  ws.on('message', data => {
-    console.log(`${data}\n`);
-  });
-
-  ws.on('close', () => {
-    console.log('Server is offline \n');
-    attemptReconnect();
-  });
-}
-
-function main() {
-  init();
-  operations();
-}
-
-main();
+  reconnect(e) {
+    console.log(`WebSocketClient: retry in ${this.autoReconnectInterval}ms`, e);
+    this.instance.removeAllListeners();
+    const that = this;
+    setTimeout(() => {
+      console.log('WebSocketClient: reconnecting...');
+      that.open(that.url);
+    }, this.autoReconnectInterval);
+  }
+};

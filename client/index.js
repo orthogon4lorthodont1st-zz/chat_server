@@ -7,8 +7,14 @@ const figlet = require('figlet');
 
 const processCommand = require('./user-functions.js');
 const WebSocketClient = require('./client.js');
-
-const wsc = new WebSocketClient('ws://localhost:3000/');
+let wsc;
+try {
+  wsc = new WebSocketClient('wss://localhost:3000/', {
+    servername: 'localhost',
+  });
+} catch (err) {
+  console.log('err', err);
+}
 
 let username;
 let rl;

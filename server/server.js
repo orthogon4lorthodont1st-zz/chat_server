@@ -1,26 +1,18 @@
 'use strict';
 
-const fs = require('fs');
 const express = require('express');
-const https = require('https');
 const uuid = require('uuid/v4');
 const WebSocket = require('ws');
 const MongoDB = require('./db/index.js');
 const DatabaseUtils = require('./dbUtils/index.js');
 
+const PORT = process.env.PORT || 3000;
+
 const WebSocketServer = WebSocket.Server;
 
-const app = express();
-
-const options = {
-  key: fs.readFileSync('../key.pem'),
-  cert: fs.readFileSync('../cert.pem'),
-  passphrase: 'catMonkey+1106',
-};
-
-const server = https
-  .createServer(options, app)
-  .listen(process.env.PORT || 3000);
+const server = express().listen(PORT, () => {
+  console.log('Listening on port', PORT);
+});
 
 const wss = new WebSocketServer({ server });
 

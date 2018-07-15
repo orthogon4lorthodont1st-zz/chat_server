@@ -9,9 +9,7 @@ const processCommand = require('./user-functions.js');
 const WebSocketClient = require('./client.js');
 let wsc;
 try {
-  wsc = new WebSocketClient('wss://localhost:3000/', {
-    servername: 'localhost',
-  });
+  wsc = new WebSocketClient('ws://localhost:3000/');
 } catch (err) {
   console.log('err', err);
 }

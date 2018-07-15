@@ -2,42 +2,87 @@
 
 const readline = require('readline');
 
-const WebSocketClient = require('./client');
+const chalk = require('chalk');
+const figlet = require('figlet');
+
+const userFunctions = require('./user-functions.js');
+const WebSocketClient = require('./client.js');
 
 const wsc = new WebSocketClient('ws://localhost:3000/');
 
 let username;
+let rl;
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  terminal: false,
-  prompt: 'ME: ',
-});
+function createInterface() {
+  rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false,
+  });
+}
+
+function console_out(data) {
+  process.stdout.clearLine();
+  process.stdout.cursorTo(0);
+  console.log(data);
+  rl.prompt();
+}
 
 function init() {
-  rl.question('Please provide a username: ', answer => {
+  console.log('\x1Bc');
+  console.log(
+    chalk.yellow.bold(
+      figlet.textSync('CLI - CHAT', {
+        horizontalLayout: 'full',
+        verticalLayout: 'full',
+      }),
+    ),
+  );
+
+  rl.question(chalk.cyan('Please provide a username: '), answer => {
     username = answer;
-    wsc.send(username);
+    rl.setPrompt(chalk.magenta(`${username}: `));
     rl.prompt();
+    wsc.send(username);
   });
+}
+
+function setupRLInterface() {
+  if (rl) {
+    rl.close();
+  }
+  createInterface();
+  rl.setPrompt(chalk.magenta(`${username}: `));
+
+  if (!username) {
+    init();
+  } else {
+    rl.prompt();
+  }
 }
 
 function main() {
   wsc.open();
 
   wsc.onopen = () => {
-    if (!username) {
-      init();
-    } else {
-      rl.prompt();
-    }
+    setupRLInterface();
 
     rl.on('line', input => {
+      if (input.split('')[0] === '/') {
+        userFunctions(input);
+      }
       wsc.send(input);
       rl.prompt();
     });
   };
+
+  wsc.onmessage = data => {
+    console_out(data);
+  };
 }
 
-main();
+try {
+  main();
+} catch (err) {
+  console.log('err', err);
+}

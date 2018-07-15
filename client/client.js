@@ -1,6 +1,7 @@
 'use strict';
 
 const WebSocket = require('ws');
+const chalk = require('chalk');
 
 module.exports = class WebSocketClient {
   constructor(url) {
@@ -16,17 +17,17 @@ module.exports = class WebSocketClient {
     });
 
     this.instance.on('message', data => {
-      console.log(data);
+      this.onmessage(data);
     });
 
     this.instance.on('close', e => {
+      console.log(chalk.red('\n \n Connection closed'));
       switch (e.code) {
-        case 1000: // CLOSE_NORMAL
-          console.log('WebSocket: closed');
+        case 1000:
+          console.log('WebSocket: closed normally');
           break;
         default:
-          // Abnormal closure
-          this.reconnect(e);
+          this.reconnect();
           break;
       }
     });
@@ -34,29 +35,35 @@ module.exports = class WebSocketClient {
     this.instance.on('error', e => {
       switch (e.code) {
         case 'ECONNREFUSED':
-          this.reconnect(e);
+          this.reconnect();
           break;
         default:
-          console.log('WebSocketClient: error');
+          console.log('WebSocketClient: error', e);
           break;
       }
     });
   }
 
   send(data) {
+    if (typeof data === 'object') {
+      throw new Error('Cannot send a javascript object');
+    }
+
     try {
-      this.instance.send(data);
+      if ((this.instance.readyState = WebSocket.OPEN)) {
+        this.instance.send(data);
+      } else {
+        console.log('Please try again in a moment');
+      }
     } catch (e) {
       this.instance.emit('error', e);
     }
   }
 
-  reconnect(e) {
-    console.log(`WebSocketClient: retry in ${this.autoReconnectInterval}ms`, e);
+  reconnect() {
     this.instance.removeAllListeners();
-    const that = this;
     setTimeout(() => {
-      console.log('WebSocketClient: reconnecting...');
+      console.log(chalk.green('\n WebSocketClient: reconnecting...\n'));
       this.open(this.url);
     }, this.autoReconnectInterval);
   }

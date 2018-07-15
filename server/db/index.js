@@ -1,21 +1,18 @@
+'use strict';
+
 const MongoClient = require('mongodb').MongoClient;
 
-let _db;
-
-module.exports = {
-  connectToServer: function(callback) {
-    MongoClient.connect(
+module.exports = class Database {
+  static async connect() {
+    const client = await MongoClient.connect(
       'mongodb://localhost:27017',
       { useNewUrlParser: true },
-      (err, client) => {
-        _db = client.db('testdb');
-
-        return callback(err);
-      },
     );
-  },
 
-  getDb: function() {
-    return _db;
-  },
+    this.db = client.db('testdb');
+  }
+
+  static getDB() {
+    return this.db;
+  }
 };

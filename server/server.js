@@ -4,8 +4,8 @@ const express = require('express');
 const uuid = require('uuid/v4');
 const WebSocket = require('ws');
 
-const mongoUtil = require('./db/index.js');
-
+const MongoDB = require('./db/index.js');
+const DatabaseUtils = require('./dbUtils/index.js');
 const WebSocketServer = WebSocket.Server;
 
 const PORT = process.env.PORT || 3000;
@@ -49,7 +49,12 @@ function isClient(ws) {
   return client.length > 0;
 }
 
-function initWebSockets() {
+async function main() {
+  await MongoDB.connect();
+
+  const user = await new DatabaseUtils().getUsers();
+  console.log('user', user);
+
   wss.on('connection', ws => {
     if (!isClient(ws)) {
       ws.id = uuid();
@@ -75,17 +80,6 @@ function initWebSockets() {
       broadcast(ws, message);
     });
   });
-}
-
-function main() {
-  mongoUtil.connectToServer(err => {
-    if (err) {
-      throw new Error('db connections error', err);
-    }
-    const db = mongoUtil.getDb();
-    console.log('db', db);
-  });
-  initWebSockets();
 }
 
 main();

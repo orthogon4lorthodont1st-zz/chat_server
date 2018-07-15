@@ -5,7 +5,7 @@ const readline = require('readline');
 const chalk = require('chalk');
 const figlet = require('figlet');
 
-const userFunctions = require('./user-functions.js');
+const processCommand = require('./user-functions.js');
 const WebSocketClient = require('./client.js');
 
 const wsc = new WebSocketClient('ws://localhost:3000/');
@@ -69,7 +69,7 @@ function main() {
 
     rl.on('line', input => {
       if (input.split('')[0] === '/') {
-        userFunctions(input);
+        processCommand(input);
       }
       wsc.send(input);
       rl.prompt();

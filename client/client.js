@@ -33,6 +33,7 @@ module.exports = class WebSocketClient {
     });
 
     this.instance.on('error', e => {
+      console.log('ee', e);
       switch (e.code) {
         case 'ECONNREFUSED':
           this.reconnect();

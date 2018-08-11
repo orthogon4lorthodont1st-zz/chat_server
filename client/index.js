@@ -1,5 +1,7 @@
 'use strict';
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const readline = require('readline');
 
 const chalk = require('chalk');
@@ -7,13 +9,8 @@ const figlet = require('figlet');
 
 const UserColourHandler = require('./handleUserColours');
 const WebSocketClient = require('./client.js');
-let wsc;
 
-try {
-  wsc = new WebSocketClient('ws://localhost:3000/');
-} catch (err) {
-  console.log('err', err);
-}
+const wsc = new WebSocketClient('wss://localhost:3000/');
 
 let username;
 let rl;
@@ -54,7 +51,7 @@ function handleMessage(data) {
   if (!data) {
     return;
   }
-  const messageSource = Buffer.from(data, 'base64')
+  const messageType = Buffer.from(data, 'base64')
     .toString()
     .split('|')[0];
 
@@ -62,12 +59,12 @@ function handleMessage(data) {
     .toString()
     .split('|')[1];
 
-  if (messageSource === 'client') {
+  if (messageType === 'client') {
     const colour = UserColourHandler.getUserColour(message);
     printClientMessage(message, colour);
-  } else if (messageSource === 'system') {
+  } else if (messageType === 'system') {
     printSystemMessage(message);
-  } else if (messageSource === 'error') {
+  } else if (messageType === 'error') {
     printErrorMessage(message);
   }
 }
@@ -129,7 +126,7 @@ function setupRLInterface() {
 function main() {
   wsc.open();
 
-  wsc.onopen = () => {
+  wsc.onopen = m => {
     setupRLInterface();
 
     rl.on('line', input => {

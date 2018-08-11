@@ -1,23 +1,32 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+const http = require('https');
 const uuid = require('uuid/v4');
 const WebSocket = require('ws');
 const MongoDB = require('./db/index.js');
 const Routing = require('./routing/actions.js');
 const ClientRouting = require('./routing/clientActions.js');
-
 const op = require('./ops');
+
+const key = fs.readFileSync(path.join(__dirname, '../key.pem'), 'utf8');
+const cert = fs.readFileSync(path.join(__dirname, '../cert.pem'), 'utf8');
+
+const creds = {
+  key,
+  cert,
+};
 
 const PORT = process.env.PORT || 3000;
 
-const WebSocketServer = WebSocket.Server;
+const app = express();
 
-const server = express().listen(PORT, () => {
-  console.log('Server listening on port', PORT);
-});
+const server = https.createServer(creds, app).listen(PORT);
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocket.Server({ server });
 
 const clients = [];
 
@@ -114,3 +123,5 @@ async function main() {
 }
 
 main();
+
+// server.listen(3000);

@@ -4,14 +4,14 @@ const express = require('express');
 const uuid = require('uuid/v4');
 const WebSocket = require('ws');
 const MongoDB = require('./db/index.js');
-const DatabaseUtils = require('./dbUtils/index.js');
+const DatabaseOps = require('./db/operations.js');
 
 const PORT = process.env.PORT || 3000;
 
 const WebSocketServer = WebSocket.Server;
 
 const server = express().listen(PORT, () => {
-  console.log('Listening on port', PORT);
+  console.log('Server listening on port', PORT);
 });
 
 const wss = new WebSocketServer({ server });
@@ -52,7 +52,7 @@ function isClient(ws) {
 async function main() {
   await MongoDB.connect();
 
-  const user = await new DatabaseUtils().getUsers();
+  const user = await new DatabaseOps().getUsers();
   console.log('user', user);
 
   wss.on('connection', ws => {

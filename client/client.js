@@ -5,7 +5,7 @@ const chalk = require('chalk');
 
 module.exports = class WebSocketClient {
   constructor(url) {
-    this.autoReconnectInterval = 2 * 1000; // ms
+    this.autoReconnectInterval = 2 * 1000;
     this.url = url;
   }
 

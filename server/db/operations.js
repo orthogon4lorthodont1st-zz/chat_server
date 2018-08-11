@@ -12,6 +12,7 @@ module.exports = class DatabaseOperations {
       .collection('users')
       .find()
       .toArray();
+
     return users;
   }
 };

@@ -5,9 +5,11 @@ const readline = require('readline');
 const chalk = require('chalk');
 const figlet = require('figlet');
 
-const processCommand = require('./user-functions.js');
+const processCommand = require('./operations.js');
+const UserColourHandler = require('./handleUserColours');
 const WebSocketClient = require('./client.js');
 let wsc;
+
 try {
   wsc = new WebSocketClient('ws://localhost:3000/');
 } catch (err) {
@@ -25,13 +27,24 @@ function createInterface() {
   });
 }
 
-function console_out(data) {
+function printMessage(data, colour) {
   process.stdout.clearLine();
   process.stdout.cursorTo(0);
-  console.log(data);
+  console.log(`${chalk[colour](data.split(':')[0])}: ${data.split(':')[1]}`);
   rl.prompt();
 }
 
+function handleMessage(data) {
+  if (!data) {
+    return;
+  }
+  const colour = UserColourHandler.getUserColour(data);
+  printMessage(data, colour);
+}
+
+/**
+ * Clear terminal and display header
+ */
 function init() {
   console.log('\x1Bc');
   console.log(
@@ -43,9 +56,9 @@ function init() {
     ),
   );
 
-  rl.question(chalk.cyan('Please provide a username: '), answer => {
+  rl.question(chalk.bgRed('Please provide a username:') + ' ', answer => {
     username = answer;
-    rl.setPrompt(chalk.magenta(`${username}: `));
+    rl.setPrompt(chalk.magenta(`${username}`) + ': ');
     rl.prompt();
     wsc.send(username);
   });
@@ -55,13 +68,14 @@ function setupRLInterface() {
   if (rl) {
     rl.close();
   }
-  createInterface();
-  rl.setPrompt(chalk.magenta(`${username}: `));
 
-  if (!username) {
-    init();
-  } else {
+  createInterface();
+
+  if (username) {
+    rl.setPrompt(chalk.magenta(`${username}`) + ': ');
     rl.prompt();
+  } else {
+    init();
   }
 }
 
@@ -75,13 +89,14 @@ function main() {
       if (input.split('')[0] === '/') {
         processCommand(input);
       }
+
       wsc.send(input);
       rl.prompt();
     });
   };
 
   wsc.onmessage = data => {
-    console_out(data);
+    handleMessage(data);
   };
 }
 

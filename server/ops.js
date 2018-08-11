@@ -1,7 +1,7 @@
 module.exports = {
   createUser: 'createUser',
   deleteUser: 'deleteUser',
-  getOperation: message => {
+  getCommand: message => {
     switch (message) {
       case '/users':
         return 'getUsers';

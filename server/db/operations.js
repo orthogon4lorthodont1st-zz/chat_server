@@ -10,13 +10,13 @@ module.exports = class DatabaseOperations {
   async createUser(username) {
     await this.db
       .collection('users')
-      .update({ username }, { username }, { upsert: true })
+      .insertOne({ username })
       .catch(err => {
         throw err;
       });
   }
 
-  async deleteUsers(username) {
+  async deleteUser(username) {
     await this.db
       .collection('users')
       .remove({

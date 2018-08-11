@@ -12,6 +12,8 @@ const WebSocketClient = require('./client.js');
 
 const wsc = new WebSocketClient('wss://localhost:3000/');
 
+let isFirst = true;
+x;
 let username;
 let rl;
 
@@ -126,7 +128,7 @@ function setupRLInterface() {
 function main() {
   wsc.open();
 
-  wsc.onopen = m => {
+  wsc.onopen = () => {
     setupRLInterface();
 
     rl.on('line', input => {

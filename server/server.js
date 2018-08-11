@@ -45,6 +45,27 @@ function broadcast(currentClient, message) {
   });
 }
 
+Array.prototype.remove = function(data) {
+  for (let i = 0; i < this.length; i++) {
+    if (data === this[i]) {
+      this.splice(i, 1);
+    }
+  }
+};
+
+function usernameIsTaken(username) {
+  for (let i = 0; i < clients.length; i++) {
+    if (username === clients[i].username) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isCommand(message) {
+  return message.split('')[0] === '/' && message.length > 1;
+}
+
 function encodeErrorMessage(data) {
   return Buffer.from(`error|${data}`).toString('base64');
 }
@@ -57,58 +78,41 @@ function encodeClientMessage(data) {
   return Buffer.from(`client|${data}`).toString('base64');
 }
 
-function removeClient(ws) {
-  const myClient = clients.filter(client => client.id === ws.id)[0];
-  const index = clients.indexOf(myClient);
-
-  if (index > -1) {
-    clients.splice(index, 1);
-  }
-}
-
 function addClient(ws) {
   clients.push(ws);
-}
-
-function isClient(ws) {
-  const client = clients.filter(client => client.id === ws.id);
-
-  return client.length > 0;
 }
 
 async function main() {
   await MongoDB.connect();
 
   wss.on('connection', client => {
-    if (!isClient(client)) {
+    if (!clients.includes(client)) {
       client.id = uuid();
       client.messagesSent = 0;
       addClient(client);
     }
 
     client.on('close', async () => {
-      removeClient(client);
-      // await Routing.route(op.deleteUser, { username: client.username });
+      clients.remove(client);
+      await Routing.route(op.deleteUser, { username: client.username });
     });
 
     client.on('message', async message => {
-      if (!isClient(client)) {
-        throw new Error('Clients socket connection not stored');
+      if (client.messagesSent === 0 && usernameIsTaken(message)) {
+        return client.send(encodeErrorMessage('Username is taken'));
       }
 
       if (client.messagesSent === 0) {
-        await Routing.route(op.createUser, { username: message });
-        client.name = message;
+        client.username = message;
         client.messagesSent += 1;
-        return;
+        return Routing.route(op.createUser, { username: message });
       }
 
-      if (message.split('')[0] === '/' && message.length > 1) {
-        const command = op.getOperation(message);
+      if (isCommand(message)) {
+        const command = op.getCommand(message);
 
         if (!command) {
-          const errorMessage = encodeErrorMessage('Command not supported');
-          return client.send(errorMessage);
+          return client.send(encodeErrorMessage('Command not supported'));
         }
 
         let data = await ClientRouting.route(command, {});

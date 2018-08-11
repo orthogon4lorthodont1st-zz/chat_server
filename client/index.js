@@ -48,7 +48,7 @@ function printErrorMessage(data) {
 }
 
 /**
- * @param {String} data Data sent from server
+ * @param {String} data Data sent from server.
  */
 function handleMessage(data) {
   if (!data) {

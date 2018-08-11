@@ -7,11 +7,34 @@ module.exports = class DatabaseOperations {
     this.db = mongoDB.getDB();
   }
 
+  async createUser(username) {
+    await this.db
+      .collection('users')
+      .update({ username }, { username }, { upsert: true })
+      .catch(err => {
+        throw err;
+      });
+  }
+
+  async deleteUsers(username) {
+    await this.db
+      .collection('users')
+      .remove({
+        username,
+      })
+      .catch(err => {
+        throw err;
+      });
+  }
+
   async getUsers() {
     const users = await this.db
       .collection('users')
       .find()
-      .toArray();
+      .toArray()
+      .catch(err => {
+        throw err;
+      });
 
     return users;
   }

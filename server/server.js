@@ -4,7 +4,10 @@ const express = require('express');
 const uuid = require('uuid/v4');
 const WebSocket = require('ws');
 const MongoDB = require('./db/index.js');
-const DatabaseOps = require('./db/operations.js');
+const Routing = require('./routing/actions.js');
+const ClientRouting = require('./routing/clientActions.js');
+
+const op = require('./ops');
 
 const PORT = process.env.PORT || 3000;
 
@@ -18,16 +21,31 @@ const wss = new WebSocketServer({ server });
 
 const clients = [];
 
-function broadcast(ws, message) {
+function broadcast(currentClient, message) {
   clients.forEach(client => {
     if (
-      client.id !== ws.id &&
-      ws.messagesSent > 1 &&
+      client.id !== currentClient.id &&
+      currentClient.messagesSent > 0 &&
       client.readyState === WebSocket.OPEN
     ) {
-      client.send(`${ws.name}: ${message}`);
+      const encodedMessage = encodeClientMessage(
+        `${currentClient.name}: ${message}`,
+      );
+      client.send(encodedMessage);
     }
   });
+}
+
+function encodeErrorMessage(data) {
+  return Buffer.from(`error|${data}`).toString('base64');
+}
+
+function encodeSystemMessage(data) {
+  return Buffer.from(`system|${data}`).toString('base64');
+}
+
+function encodeClientMessage(data) {
+  return Buffer.from(`client|${data}`).toString('base64');
 }
 
 function removeClient(ws) {
@@ -52,32 +70,45 @@ function isClient(ws) {
 async function main() {
   await MongoDB.connect();
 
-  const user = await new DatabaseOps().getUsers();
-  console.log('user', user);
-
-  wss.on('connection', ws => {
-    if (!isClient(ws)) {
-      ws.id = uuid();
-      ws.messagesSent = 0;
-      addClient(ws);
+  wss.on('connection', client => {
+    if (!isClient(client)) {
+      client.id = uuid();
+      client.messagesSent = 0;
+      addClient(client);
     }
 
-    ws.on('close', () => {
-      removeClient(ws);
-      console.log('clients length', clients.length);
+    client.on('close', async () => {
+      removeClient(client);
+      // await Routing.route(op.deleteUser, { username: client.username });
     });
 
-    ws.on('message', message => {
-      if (!isClient(ws)) {
+    client.on('message', async message => {
+      if (!isClient(client)) {
         throw new Error('Clients socket connection not stored');
       }
 
-      if (ws.messagesSent === 0) {
-        ws.name = message;
+      if (client.messagesSent === 0) {
+        await Routing.route(op.createUser, { username: message });
+        client.name = message;
+        client.messagesSent += 1;
+        return;
       }
-      console.log('message: ', message);
-      ws.messagesSent += 1;
-      broadcast(ws, message);
+
+      if (message.split('')[0] === '/' && message.length > 1) {
+        const command = op.getOperation(message);
+
+        if (!command) {
+          const errorMessage = encodeErrorMessage('Command not supported');
+          return client.send(errorMessage);
+        }
+
+        let data = await ClientRouting.route(command, {});
+
+        data = data.map(user => user.username);
+        data = encodeSystemMessage(data);
+        return client.send(data);
+      }
+      broadcast(client, message);
     });
   });
 }

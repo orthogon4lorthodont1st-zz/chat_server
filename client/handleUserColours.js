@@ -20,11 +20,11 @@ module.exports = class UserColourHandler {
   static getUserColour(data) {
     const username = data.split(':')[0];
 
-    if (userColours.username) {
-      return userColours.username;
+    if (userColours[username]) {
+      return userColours[username];
     }
 
-    const rand = Math.floor(Math.random() * colours.length - 1);
+    const rand = Math.floor(Math.random() * colours.length);
     const myColour = colours[rand];
 
     userColours[username] = myColour;

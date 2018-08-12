@@ -45,7 +45,7 @@ module.exports = class WebSocketClient {
   }
 
   send(data) {
-    if (!data.message) {
+    if (!data) {
       return;
     }
 
@@ -53,7 +53,6 @@ module.exports = class WebSocketClient {
       if ((this.instance.readyState = WebSocket.OPEN)) {
         this.instance.send(JSON.stringify(data));
       } else {
-        console.log('Please try again in a moment');
       }
     } catch (e) {
       this.instance.emit('error', e);

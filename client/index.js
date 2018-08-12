@@ -51,7 +51,7 @@ function validateMessage(data) {
   }
 
   if (!data.type || !data.message) {
-    printErrorMessage('Could not process, missing type or message');
+    printErrorMessage('Could not process, missing type or message keys');
     return;
   }
 
@@ -65,7 +65,7 @@ function validateMessage(data) {
  * @param {String} data Data sent from server
  */
 function handleMessage(data) {
-  validateMessage();
+  validateMessage(data);
 
   const { type, message } = data;
 
@@ -162,16 +162,14 @@ async function connectSockets() {
   wsc.onopen = async () => {
     setupRLInterface();
     rl.on('line', message => {
-      console.log('line input');
       if (isFirstMessage) {
-        console.log('first message', user);
         wsc.send({
           user,
+          message,
         });
         isFirstMessage = false;
         rl.prompt();
       } else {
-        console.log('ont first');
         wsc.send({
           message,
         });

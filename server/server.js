@@ -46,6 +46,7 @@ Array.prototype.remove = function(data) {
 function broadcast(currentClient, message) {
   clients.forEach(client => {
     if (
+      client.isValid === true &&
       client.id !== currentClient.id &&
       currentClient.messagesSent > 0 &&
       client.readyState === WebSocket.OPEN
@@ -69,7 +70,6 @@ async function main() {
   await MongoDB.connect();
 
   wss.on('connection', (client, req) => {
-    console.log('clients siz', clients.length);
     if (!clients.includes(client)) {
       client.id = uuid();
       client.messagesSent = 0;
@@ -83,7 +83,6 @@ async function main() {
 
     client.on('message', async data => {
       data = JSON.parse(data);
-      console.log('data', data);
       if (client.messagesSent === 0) {
         client.messagesSent += 1;
         data.ip = req.connection.remoteAddress;
@@ -98,9 +97,10 @@ async function main() {
         }
       }
 
+      console.log('data', data);
       if (isCommand(data.message)) {
         const command = op.getCommand(data.message);
-
+        console.log('command', command);
         if (!command) {
           return client.send(
             JSON.stringify({
@@ -110,12 +110,12 @@ async function main() {
           );
         }
 
-        let data = await ClientRouting.route(command);
+        let response = await ClientRouting.route(command);
 
         return client.send(
           JSON.stringify({
             type: 'system',
-            message: data.map(user => user.username),
+            message: response,
           }),
         );
       }

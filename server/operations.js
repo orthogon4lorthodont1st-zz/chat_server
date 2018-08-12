@@ -72,12 +72,11 @@ module.exports = class DatabaseOperations {
         throw err;
       });
 
-    return users;
+    return users.map(user => user.username);
   }
 
   async validateUser(user) {
     const dbUser = await this.getUserByToken(user.token);
-    console.log('DB', dbUser, 'user', user);
     return (
       dbUser[0].username === user.username &&
       dbUser[0].ip === user.ip &&

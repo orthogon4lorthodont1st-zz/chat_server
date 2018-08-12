@@ -41,19 +41,16 @@ module.exports = class DatabaseOperations {
   async getUserByToken(token) {
     const user = await this.db
       .collection('users')
-      .find({
-        token,
-      })
-      .toArray()
+      .findAndModify({ token }, [], { $set: { isValid: true } })
       .catch(err => {
         throw err;
       });
 
-    return user;
+    return user.value;
   }
 
   async deleteUser(username) {
-    await this.db
+    return this.db
       .collection('users')
       .remove({
         username,
@@ -76,11 +73,16 @@ module.exports = class DatabaseOperations {
   }
 
   async validateUser(user) {
-    const dbUser = await this.getUserByToken(user.token);
+    const dbUser = await this.getUserByToken('badToken');
+
+    if (!dbUser) {
+      return false;
+    }
+
     return (
-      dbUser[0].username === user.username &&
-      dbUser[0].ip === user.ip &&
-      dbUser[0].token === user.token
+      dbUser.username === user.username &&
+      dbUser.ip === user.ip &&
+      dbUser.token === user.token
     );
   }
 };

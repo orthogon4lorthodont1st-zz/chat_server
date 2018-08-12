@@ -76,6 +76,10 @@ function handleMessage(data) {
   } else if (type === 'system') {
     printSystemMessage(message);
   } else if (type === 'error') {
+    if (message === errors.invalidUser) {
+      user = null;
+      setupRLInterface();
+    }
     printErrorMessage(message);
   } else {
     printErrorMessage('Could not process message');

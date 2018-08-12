@@ -5,6 +5,7 @@ module.exports = class Router {
     switch (operation) {
       case 'deleteUser':
         try {
+          console.log('data', data, 'deleted user');
           const username = data;
           return new DatabaseOps().deleteUser(username);
         } catch (err) {

@@ -78,6 +78,7 @@ async function main() {
 
     client.on('close', async () => {
       clients.remove(client);
+      console.log('client', client.username);
       await Routing.route(op.deleteUser, client.username);
     });
 
@@ -86,18 +87,31 @@ async function main() {
       if (client.messagesSent === 0) {
         client.messagesSent += 1;
         data.ip = req.connection.remoteAddress;
-
+        console.log('0th message received');
         const isValid = await Routing.route(op.validateUser, data);
         if (isValid) {
           client.username = data.user.username;
           client.isValid = true;
         } else {
           clients.remove(client);
-          return;
+          client.send(
+            JSON.stringify({
+              type: 'error',
+              message:
+                'Your token could not be verified, we are trying to reconnect you',
+            }),
+          );
+          return client.close();
         }
       }
 
-      console.log('data', data);
+      console.log(
+        'clients',
+        clients.map(client => ({
+          v: client.isValid,
+          name: client.username,
+        })),
+      );
       if (isCommand(data.message)) {
         const command = op.getCommand(data.message);
         console.log('command', command);

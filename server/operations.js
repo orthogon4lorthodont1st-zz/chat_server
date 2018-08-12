@@ -73,7 +73,7 @@ module.exports = class DatabaseOperations {
   }
 
   async validateUser(user) {
-    const dbUser = await this.getUserByToken('badToken');
+    const dbUser = await this.getUserByToken(user.token);
 
     if (!dbUser) {
       return false;

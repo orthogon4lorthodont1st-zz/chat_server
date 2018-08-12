@@ -10,6 +10,4 @@
 
 You will have to create your own cert and key .pem files. 
 
-Or you can instead pass a http server to the WebSocket constructor in server.js and change the websocket url on the client from wss:// to ws://
-
-You can do this by passing the express app straight into it
+Or instead you can pass a http server to the WebSocket constructor in server.js (pass express app directly into it) and change the websocket url on the client from wss:// to ws://

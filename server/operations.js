@@ -80,6 +80,7 @@ module.exports = class DatabaseOperations {
     }
 
     return (
+      dbUser.id === user.id &&
       dbUser.username === user.username &&
       dbUser.ip === user.ip &&
       dbUser.token === user.token

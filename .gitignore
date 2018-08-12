@@ -1,3 +1,19 @@
 node_modules
 key.pem
 cert.pem
+
+# TODO:
+
+# /exit               - Exit the chat.
+# /msg USER MESSAGE   - Send MESSAGE to USER.
+# /names              - List users who are connected.
+# /nick NAME          - Rename yourself.
+# /quiet              - Silence room.
+# /whois USER         - Information about USER.
+
+# IDEAS
+
+# /kick USER
+# /email EMAIL MESSAGE
+# /text NUMBER MESSAGE
+# /send FILE USER   **

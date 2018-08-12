@@ -2,7 +2,6 @@ const DatabaseOps = require('../operations');
 
 module.exports = class Router {
   static async route(operation) {
-    console.log('op', operation);
     switch (operation) {
       case 'getUsers':
         try {

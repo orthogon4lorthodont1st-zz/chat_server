@@ -3,108 +3,93 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const readline = require('readline');
-
+const rp = require('request-promise');
 const chalk = require('chalk');
 const figlet = require('figlet');
 
 const UserColourHandler = require('./handleUserColours');
 const WebSocketClient = require('./client.js');
-
+const errors = require('./errors');
 const wsc = new WebSocketClient('wss://localhost:3000/');
 
-let isFirst = true;
-x;
-let username;
+let isFirstMessage = true;
+let user;
 let rl;
-
-function createInterface() {
-  rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: false,
-  });
-}
+let token;
 
 function printClientMessage(data, colour) {
   process.stdout.clearLine();
   process.stdout.cursorTo(0);
-  console.log(`${chalk[colour](data.split(':')[0])}: ${data.split(':')[1]}`);
-  rl.prompt();
+  console.log(`${chalk[colour](data.username)}: ${data.message}`);
+  if (user) {
+    rl.prompt();
+  }
 }
 
 function printSystemMessage(data) {
   process.stdout.clearLine();
   process.stdout.cursorTo(0);
   console.log(data);
-  rl.prompt();
+  if (user) {
+    rl.prompt();
+  }
 }
 
 function printErrorMessage(data) {
   process.stdout.clearLine();
   process.stdout.cursorTo(0);
   console.log(chalk.bgBlue(data));
-  rl.prompt();
+  if (user) {
+    rl.prompt();
+  }
+}
+
+function validateMessage(data) {
+  if (!data) {
+    printErrorMessage('Malformed message');
+    return;
+  }
+
+  if (!data.type || !data.message) {
+    printErrorMessage('Could not process, missing type or message');
+    return;
+  }
+
+  if (data.type === 'clientMessage' && !data.username) {
+    printErrorMessage('Could not process, missing username');
+    return;
+  }
 }
 
 /**
  * @param {String} data Data sent from server
  */
 function handleMessage(data) {
-  if (!data) {
-    return;
-  }
-  const messageType = Buffer.from(data, 'base64')
-    .toString()
-    .split('|')[0];
+  validateMessage();
 
-  const message = Buffer.from(data, 'base64')
-    .toString()
-    .split('|')[1];
+  const { type, message } = data;
 
-  if (messageType === 'client') {
-    const colour = UserColourHandler.getUserColour(message);
-    printClientMessage(message, colour);
-  } else if (messageType === 'system') {
+  if (type === 'clientMessage') {
+    const username = { data };
+    const colour = UserColourHandler.getUserColour(username);
+    printClientMessage(data, colour);
+  } else if (type === 'system') {
     printSystemMessage(message);
-  } else if (messageType === 'error') {
+  } else if (type === 'error') {
     printErrorMessage(message);
+  } else {
+    printErrorMessage('Could not process message');
   }
 }
 
-function askQuestion() {
+function askForUsername() {
   rl.question(chalk.greenBright('Please provide a username:') + ' ', answer => {
     if (!answer || answer.length === 0) {
-      askQuestion();
+      askForUsername();
     } else {
-      username = answer;
-      rl.setPrompt(chalk.magenta(`${username}`) + ': ');
-      rl.prompt();
-      wsc.send(username);
+      return attemptSetUp(answer);
     }
   });
-}
-
-/**
- * Clear terminal, display header and prompt for username
- */
-function init() {
-  console.log('\x1Bc');
-  console.log(
-    chalk.yellow.bold(
-      figlet.textSync('CLI - CHAT', {
-        horizontalLayout: 'full',
-        verticalLayout: 'full',
-      }),
-    ),
-  );
-
-  console.log(
-    chalk.blue.bold(
-      'After entering a username, type /list to see operations. \n',
-    ),
-  );
-
-  askQuestion();
 }
 
 /**
@@ -115,35 +100,98 @@ function setupRLInterface() {
     rl.close();
   }
 
-  createInterface();
+  rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false,
+  });
 
-  if (username) {
-    rl.setPrompt(chalk.magenta(`${username}`) + ': ');
+  if (user) {
+    rl.setPrompt(chalk.magenta(`${user.username}`) + ': ');
     rl.prompt();
   } else {
-    init();
+    console.log('\x1Bc');
+    console.log(
+      chalk.yellow.bold(
+        figlet.textSync('CLI - CHAT', {
+          horizontalLayout: 'full',
+          verticalLayout: 'full',
+        }),
+      ),
+    );
+    console.log(
+      chalk.blue.bold(
+        'After entering a username, type /list to see operations. \n',
+      ),
+    );
+    askForUsername();
   }
 }
 
-function main() {
+function attemptSetUp(answer) {
+  if (!user) {
+    return rp({
+      uri: 'https://localhost:3000/v1/user',
+      method: 'POST',
+      strictSSL: false,
+      body: {
+        username: answer,
+      },
+      json: true,
+    })
+      .then(result => {
+        user = result.user;
+        token = result.token;
+        rl.setPrompt(chalk.magenta(`${user.username}`) + ': ');
+        rl.prompt();
+      })
+      .catch(err => {
+        if (err.error.message === errors.usernameTaken) {
+          printErrorMessage(err.error.message);
+          askForUsername();
+        } else {
+          printErrorMessage(err.error.message);
+        }
+      });
+  }
+}
+
+async function connectSockets() {
   wsc.open();
 
-  wsc.onopen = () => {
+  wsc.onopen = async () => {
     setupRLInterface();
-
-    rl.on('line', input => {
-      wsc.send(input);
-      rl.prompt();
+    rl.on('line', message => {
+      console.log('line input');
+      if (isFirstMessage) {
+        console.log('first message', user);
+        wsc.send({
+          user,
+        });
+        isFirstMessage = false;
+        rl.prompt();
+      } else {
+        console.log('ont first');
+        wsc.send({
+          message,
+        });
+        rl.prompt();
+      }
     });
   };
 
   wsc.onmessage = data => {
+    data = JSON.parse(data);
     handleMessage(data);
   };
 }
 
-try {
-  main();
-} catch (err) {
-  console.log('err', err);
+async function main() {
+  try {
+    connectSockets();
+  } catch (err) {
+    console.log('Error establishing connection', err);
+  }
 }
+
+main();

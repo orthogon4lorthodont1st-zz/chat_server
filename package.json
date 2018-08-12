@@ -21,10 +21,12 @@
   },
   "homepage": "https://github.com/orthogon4lorthodont1st/chat_server#readme",
   "dependencies": {
+    "body-parser": "^1.18.3",
     "chalk": "2.4.1",
     "express": "4.16.3",
     "figlet": "1.2.0",
     "mongodb": "3.1.1",
+    "request-promise": "^4.2.2",
     "uuid": "3.3.2",
     "ws": "^5.2.2"
   }

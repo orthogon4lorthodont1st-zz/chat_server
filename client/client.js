@@ -33,7 +33,6 @@ module.exports = class WebSocketClient {
     });
 
     this.instance.on('error', e => {
-      console.log('ee', e);
       switch (e.code) {
         case 'ECONNREFUSED':
           this.reconnect();
@@ -46,13 +45,13 @@ module.exports = class WebSocketClient {
   }
 
   send(data) {
-    if (typeof data === 'object') {
-      throw new Error('Cannot send a javascript object');
+    if (!data.message) {
+      return;
     }
 
     try {
       if ((this.instance.readyState = WebSocket.OPEN)) {
-        this.instance.send(data);
+        this.instance.send(JSON.stringify(data));
       } else {
         console.log('Please try again in a moment');
       }

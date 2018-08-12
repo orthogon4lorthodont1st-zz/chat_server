@@ -1,9 +1,9 @@
-const DatabaseOps = require('../db/operations');
+const DatabaseOps = require('../operations');
 
 module.exports = class Router {
   static async route(operation) {
     switch (operation) {
-      case 'getUsers':
+      case '/users':
         try {
           return new DatabaseOps().getUsers();
         } catch (err) {

@@ -4,13 +4,14 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const http = require('https');
 const uuid = require('uuid/v4');
 const WebSocket = require('ws');
+const bodyParser = require('body-parser');
 const MongoDB = require('./db/index.js');
 const Routing = require('./routing/actions.js');
-const ClientRouting = require('./routing/clientActions.js');
-const op = require('./ops');
+const ClientRouting = require('./routing/clientCommands.js');
+const op = require('./opNames');
+const routes = require('./routing/httpRoutes.js');
 
 const key = fs.readFileSync(path.join(__dirname, '../key.pem'), 'utf8');
 const cert = fs.readFileSync(path.join(__dirname, '../cert.pem'), 'utf8');
@@ -24,26 +25,15 @@ const PORT = process.env.PORT || 3000;
 
 const app = express();
 
-const server = https.createServer(creds, app).listen(PORT);
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use('/v1', routes);
+
+const server = https.createServer(creds, app);
 
 const wss = new WebSocket.Server({ server });
 
 const clients = [];
-
-function broadcast(currentClient, message) {
-  clients.forEach(client => {
-    if (
-      client.id !== currentClient.id &&
-      currentClient.messagesSent > 0 &&
-      client.readyState === WebSocket.OPEN
-    ) {
-      const encodedMessage = encodeClientMessage(
-        `${currentClient.name}: ${message}`,
-      );
-      client.send(encodedMessage);
-    }
-  });
-}
 
 Array.prototype.remove = function(data) {
   for (let i = 0; i < this.length; i++) {
@@ -53,79 +43,90 @@ Array.prototype.remove = function(data) {
   }
 };
 
-function usernameIsTaken(username) {
-  for (let i = 0; i < clients.length; i++) {
-    if (username === clients[i].username) {
-      return true;
+function broadcast(currentClient, message) {
+  clients.forEach(client => {
+    if (
+      client.id !== currentClient.id &&
+      currentClient.messagesSent > 0 &&
+      client.readyState === WebSocket.OPEN
+    ) {
+      client.send(
+        JSON.stringify({
+          type: 'clientMessage',
+          username: currentClient.username,
+          message,
+        }),
+      );
     }
-  }
-  return false;
+  });
 }
 
 function isCommand(message) {
   return message.split('')[0] === '/' && message.length > 1;
 }
 
-function encodeErrorMessage(data) {
-  return Buffer.from(`error|${data}`).toString('base64');
-}
-
-function encodeSystemMessage(data) {
-  return Buffer.from(`system|${data}`).toString('base64');
-}
-
-function encodeClientMessage(data) {
-  return Buffer.from(`client|${data}`).toString('base64');
-}
-
-function addClient(ws) {
-  clients.push(ws);
-}
-
 async function main() {
   await MongoDB.connect();
 
-  wss.on('connection', client => {
+  wss.on('connection', (client, req) => {
+    console.log('clients siz', clients.length);
     if (!clients.includes(client)) {
       client.id = uuid();
       client.messagesSent = 0;
-      addClient(client);
+      clients.push(client);
     }
 
     client.on('close', async () => {
       clients.remove(client);
-      await Routing.route(op.deleteUser, { username: client.username });
+      await Routing.route(op.deleteUser, client.username);
     });
 
-    client.on('message', async message => {
-      if (client.messagesSent === 0 && usernameIsTaken(message)) {
-        return client.send(encodeErrorMessage('Username is taken'));
-      }
-
+    client.on('message', async data => {
+      data = JSON.parse(data);
+      console.log('data', data);
       if (client.messagesSent === 0) {
-        client.username = message;
         client.messagesSent += 1;
-        return Routing.route(op.createUser, { username: message });
+        data.ip = req.connection.remoteAddress;
+
+        const isValid = await Routing.route(op.validateUser, data);
+        if (isValid) {
+          client.username = data.user.username;
+          client.isValid = true;
+        } else {
+          clients.remove(client);
+          return;
+        }
       }
 
-      if (isCommand(message)) {
-        const command = op.getCommand(message);
+      if (isCommand(data.message)) {
+        const command = op.getCommand(data.message);
 
         if (!command) {
-          return client.send(encodeErrorMessage('Command not supported'));
+          return client.send(
+            JSON.stringify({
+              type: 'error',
+              message: 'Command not supported',
+            }),
+          );
         }
 
-        let data = await ClientRouting.route(command, {});
+        let data = await ClientRouting.route(command);
 
-        data = data.map(user => user.username);
-        data = encodeSystemMessage(data);
-        return client.send(data);
+        return client.send(
+          JSON.stringify({
+            type: 'system',
+            message: data.map(user => user.username),
+          }),
+        );
       }
-      broadcast(client, message);
+
+      broadcast(client, data.message);
     });
   });
 }
 
 main();
 
-// server.listen(3000);
+server.listen(PORT, () => {
+  console.log(`[SETUP] Server listening on port ${PORT}`);
+});

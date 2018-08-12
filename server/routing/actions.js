@@ -1,27 +1,21 @@
-const DatabaseOps = require('../db/operations');
+const DatabaseOps = require('../operations.js');
 
 module.exports = class Router {
   static async route(operation, data) {
     switch (operation) {
-      case 'createUser':
-        const username = data.username.trim();
-        try {
-          return new DatabaseOps().createUser(username);
-        } catch (err) {
-          throw new Error('Could not create user', err);
-        }
       case 'deleteUser':
         try {
-          const username = data.username;
+          const username = data;
           return new DatabaseOps().deleteUser(username);
         } catch (err) {
           throw new Error('Could not delete user', err);
         }
-      case 'getUsers':
+      case 'validateUser':
         try {
-          return new DatabaseOps().getUsers();
+          const { user } = data;
+          return new DatabaseOps().validateUser(user);
         } catch (err) {
-          throw new Error('Could not retrieve users');
+          throw new Error('Could not validate token', err);
         }
       default:
         return 'Did not match';

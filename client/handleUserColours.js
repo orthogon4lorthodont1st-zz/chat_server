@@ -17,9 +17,7 @@ const colours = [
 ];
 
 module.exports = class UserColourHandler {
-  static getUserColour(data) {
-    const username = data.split(':')[0];
-
+  static getUserColour(username) {
     if (userColours[username]) {
       return userColours[username];
     }

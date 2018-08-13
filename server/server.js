@@ -84,8 +84,11 @@ async function main() {
     });
 
     client.on('message', async data => {
-      data = JSON.parse(data);
+      console.log('data: ', data, data.toString('utf8'));
+      return;
 
+      data = JSON.parse(data);
+      if (data) console.log('message', data);
       if (client.messagesSent === 0) {
         client.messagesSent += 1;
         data.ip = req.connection.remoteAddress;

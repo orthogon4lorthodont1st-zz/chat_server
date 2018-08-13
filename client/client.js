@@ -51,7 +51,7 @@ module.exports = class WebSocketClient {
 
     try {
       if ((this.instance.readyState = WebSocket.OPEN)) {
-        this.instance.send(JSON.stringify(data));
+        this.instance.send(data);
       } else {
       }
     } catch (e) {

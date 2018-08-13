@@ -2,6 +2,8 @@
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
+const fs = require('fs');
+const path = require('path');
 const readline = require('readline');
 const rp = require('request-promise');
 const chalk = require('chalk');
@@ -125,7 +127,7 @@ function setupRLInterface() {
     );
     console.log(
       chalk.blue.bold(
-        'After entering a username, type /list to see operations. \n',
+        'After entering a username, type any command to activate. Type /list to see operations. \n',
       ),
     );
     askForUsername();
@@ -145,7 +147,6 @@ function attemptSetUp(answer) {
     })
       .then(result => {
         user = result.user;
-        token = result.token;
         rl.setPrompt(chalk.magenta(`${user.username}`) + ': ');
         rl.prompt();
       })
@@ -166,17 +167,34 @@ async function connectSockets() {
   wsc.onopen = async () => {
     setupRLInterface();
     rl.on('line', message => {
-      if (isFirstMessage) {
-        wsc.send({
-          user,
-          message,
+      if (message === '/send') {
+        const readStream = fs.createReadStream(
+          path.join(__dirname, 'test.txt'),
+        );
+        readStream.on('data', data => {
+          console.log('data', data);
+          wsc.send(data);
         });
+        readStream.on('finish', () => {
+          console.log('FINISHED');
+        });
+      }
+
+      if (isFirstMessage) {
+        wsc.send(
+          JSON.stringify({
+            user,
+            message,
+          }),
+        );
         isFirstMessage = false;
         rl.prompt();
       } else {
-        wsc.send({
-          message,
-        });
+        wsc.send(
+          JSON.stringify({
+            message,
+          }),
+        );
         rl.prompt();
       }
     });

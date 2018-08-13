@@ -6,6 +6,8 @@ module.exports = {
     switch (message) {
       case '/users':
         return 'getUsers';
+      case '/send':
+        return 'uploadFile';
       default:
         return null;
     }

@@ -17,4 +17,4 @@ cert.pem
 # /kick USER
 # /email EMAIL MESSAGE
 # /text NUMBER MESSAGE
-# /send FILE USER   **
+# /send FILEPATH USER   **

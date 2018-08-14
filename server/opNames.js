@@ -3,11 +3,9 @@ module.exports = {
   deleteUser: 'deleteUser',
   validateUser: 'validateUser',
   getCommand: message => {
-    switch (message) {
+    switch (message.split(' ')[0]) {
       case '/users':
         return 'getUsers';
-      case '/send':
-        return 'uploadFile';
       default:
         return null;
     }

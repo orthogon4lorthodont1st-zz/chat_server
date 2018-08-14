@@ -1,4 +1,4 @@
-const DatabaseOps = require('../operations');
+const DatabaseOps = require('../services/dbOperations');
 
 module.exports = class Router {
   static async route(operation) {
@@ -9,8 +9,9 @@ module.exports = class Router {
         } catch (err) {
           throw new Error('Could not retrieve users');
         }
+
       default:
-        return 'Did not match';
+        return 'Unexpected Error';
     }
   }
 };

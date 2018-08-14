@@ -50,11 +50,13 @@ module.exports = class WebSocketClient {
     }
 
     try {
-      if ((this.instance.readyState = WebSocket.OPEN)) {
+      if (this.instance.readyState === WebSocket.OPEN) {
         this.instance.send(data);
       } else {
+        console.log('Could not send data');
       }
     } catch (e) {
+      console.log('e', e);
       this.instance.emit('error', e);
     }
   }

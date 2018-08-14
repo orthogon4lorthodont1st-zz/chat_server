@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const crypto = require('crypto');
-const DatabaseOps = require('../operations.js');
+const DatabaseOps = require('../services/dbOperations.js');
 
 router.post('/user', async (req, res) => {
   try {

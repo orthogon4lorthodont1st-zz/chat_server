@@ -2,16 +2,15 @@
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-const fs = require('fs');
-const path = require('path');
 const readline = require('readline');
 const rp = require('request-promise');
 const chalk = require('chalk');
 const figlet = require('figlet');
 
 const WebSocketClient = require('./client.js');
-const Utils = require('./utils/index.js');
-const errors = require('./errors');
+const errors = require('./utils/errors.js');
+const Utils = require('./utils/utils.js');
+const CommandsService = require('./commands/commands.js');
 
 const wsc = new WebSocketClient('wss://localhost:3000/');
 
@@ -20,50 +19,23 @@ let user;
 let rl;
 let token;
 
-function printClientMessage(data, colour) {
-  process.stdout.clearLine();
-  process.stdout.cursorTo(0);
-  console.log(`${chalk[colour](data.username)}: ${data.message}`);
-  if (user) {
-    rl.prompt();
-  }
-}
-
-function printSystemMessage(data) {
-  process.stdout.clearLine();
-  process.stdout.cursorTo(0);
-  console.log(data);
-  if (user) {
-    rl.prompt();
-  }
-}
-
-function printErrorMessage(data) {
-  process.stdout.clearLine();
-  process.stdout.cursorTo(0);
-  console.log(chalk.bgBlue(data));
-  if (user) {
-    rl.prompt();
-  }
-}
-
-function isCommand(message) {
-  return message.split('')[0] === '/';
-}
-
 function validateMessage(data) {
   if (!data) {
-    printErrorMessage('Malformed message');
+    Utils.printErrorMessage('Malformed message', user, rl);
     return;
   }
 
   if (!data.type || !data.message) {
-    printErrorMessage('Could not process, missing type or message keys');
+    Utils.printErrorMessage(
+      'Could not process, missing type or message keys',
+      user,
+      rl,
+    );
     return;
   }
 
   if (data.type === 'clientMessage' && !data.username) {
-    printErrorMessage('Could not process, missing username');
+    Utils.printErrorMessage('Could not process, missing username', user, rl);
     return;
   }
 }
@@ -79,17 +51,17 @@ function handleMessage(data) {
   if (type === 'clientMessage') {
     const username = { data };
     const colour = Utils.getUserColour(username);
-    printClientMessage(data, colour);
+    Utils.printClientMessage(data, colour, user, rl);
   } else if (type === 'system') {
-    printSystemMessage(message);
+    Utils.printSystemMessage(message, user, rl);
   } else if (type === 'error') {
     if (message === errors.invalidUser) {
       user = null;
       setupRLInterface();
     }
-    printErrorMessage(message);
+    Utils.printErrorMessage(message, user, rl);
   } else {
-    printErrorMessage('Could not process message');
+    Utils.printErrorMessage('Could not process message', user, rl);
   }
 }
 
@@ -157,10 +129,10 @@ function attemptSetUp(answer) {
       })
       .catch(err => {
         if (err.error.message === errors.usernameTaken) {
-          printErrorMessage(err.error.message);
+          Utils.printErrorMessage(err.error.message, user, rl);
           askForUsername();
         } else {
-          printErrorMessage(err.error.message);
+          Utils.printErrorMessage(err.error.message, user, rl);
         }
       });
   }
@@ -173,25 +145,13 @@ async function connectSockets() {
     setupRLInterface();
 
     rl.on('line', message => {
-      if (isCommand(message)) {
-        return handleCommand(message);
-      }
-
-      if (message === '/send') {
-        const readStream = fs.createReadStream(
-          path.join(__dirname, 'test.txt'),
-        );
-        readStream.on('data', data => {
-          return wsc.send(data);
-        });
-        readStream.on('finish', () => {
-          console.log('FINISHED');
-        });
+      if (Utils.isCommand(message)) {
+        return new CommandsService(wsc, user, rl).process(message);
       }
 
       if (isFirstMessage) {
         isFirstMessage = false;
-        return wsc.send(
+        wsc.send(
           JSON.stringify({
             user,
             message,

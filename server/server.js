@@ -1,18 +1,21 @@
 'use strict';
 
-const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { StringDecoder } = require('string_decoder');
+
+const express = require('express');
 const uuid = require('uuid/v4');
 const WebSocket = require('ws');
 const bodyParser = require('body-parser');
 
 const MongoDB = require('./db/index.js');
 const Routing = require('./routing/actions.js');
-const ClientRouting = require('./routing/clientCommands.js');
+const CommandRouting = require('./routing/commands.js');
 const op = require('./opNames');
 const routes = require('./routing/httpRoutes.js');
+const fileUploads = require('./services/fileUploads');
 
 const key = fs.readFileSync(path.join(__dirname, '../key.pem'), 'utf8');
 const cert = fs.readFileSync(path.join(__dirname, '../cert.pem'), 'utf8');
@@ -83,12 +86,24 @@ async function main() {
       await Routing.route(op.deleteUser, client.username);
     });
 
+    let decoder = new StringDecoder('utf8');
+
     client.on('message', async data => {
-      data = JSON.parse(data);
+      if (typeof data === 'string') {
+        data = JSON.parse(data);
+      }
+
+      console.log('aa', data.toString());
+
+      if (data instanceof Buffer) {
+        console.log('inside buff');
+        const textChunk = decoder.write(data);
+        console.log('textChunk \n', textChunk);
+        return;
+      }
 
       if (client.messagesSent === 0) {
         client.messagesSent += 1;
-        data.ip = req.connection.remoteAddress;
 
         const isValid = await Routing.route(op.validateUser, data);
 
@@ -121,7 +136,7 @@ async function main() {
           );
         }
 
-        const response = await ClientRouting.route(command);
+        const response = await CommandRouting.route(command);
 
         return client.send(
           JSON.stringify({

@@ -1,4 +1,4 @@
-const DatabaseOps = require('../operations.js');
+const DatabaseOps = require('../services/dbOperations.js');
 
 module.exports = class Router {
   static async route(operation, data) {

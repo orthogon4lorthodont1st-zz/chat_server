@@ -1,6 +1,6 @@
 'use strict';
 
-const mongoDB = require('./db/index.js');
+const mongoDB = require('../db/index.js');
 
 module.exports = class DatabaseOperations {
   constructor() {

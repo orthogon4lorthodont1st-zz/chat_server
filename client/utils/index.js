@@ -29,4 +29,8 @@ module.exports = class UserColourHandler {
 
     return userColours[username];
   }
+
+  static isCommand(message) {
+    return message.split('')[0] === '/' && message.length > 1;
+  }
 };

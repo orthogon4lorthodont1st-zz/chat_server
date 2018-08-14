@@ -9,9 +9,10 @@ const rp = require('request-promise');
 const chalk = require('chalk');
 const figlet = require('figlet');
 
-const UserColourHandler = require('./handleUserColours');
 const WebSocketClient = require('./client.js');
+const Utils = require('./utils/index.js');
 const errors = require('./errors');
+
 const wsc = new WebSocketClient('wss://localhost:3000/');
 
 let isFirstMessage = true;
@@ -46,6 +47,10 @@ function printErrorMessage(data) {
   }
 }
 
+function isCommand(message) {
+  return message.split('')[0] === '/';
+}
+
 function validateMessage(data) {
   if (!data) {
     printErrorMessage('Malformed message');
@@ -73,7 +78,7 @@ function handleMessage(data) {
 
   if (type === 'clientMessage') {
     const username = { data };
-    const colour = UserColourHandler.getUserColour(username);
+    const colour = Utils.getUserColour(username);
     printClientMessage(data, colour);
   } else if (type === 'system') {
     printSystemMessage(message);
@@ -166,14 +171,18 @@ async function connectSockets() {
 
   wsc.onopen = async () => {
     setupRLInterface();
+
     rl.on('line', message => {
+      if (isCommand(message)) {
+        return handleCommand(message);
+      }
+
       if (message === '/send') {
         const readStream = fs.createReadStream(
           path.join(__dirname, 'test.txt'),
         );
         readStream.on('data', data => {
-          console.log('data', data);
-          wsc.send(data);
+          return wsc.send(data);
         });
         readStream.on('finish', () => {
           console.log('FINISHED');
@@ -181,13 +190,13 @@ async function connectSockets() {
       }
 
       if (isFirstMessage) {
-        wsc.send(
+        isFirstMessage = false;
+        return wsc.send(
           JSON.stringify({
             user,
             message,
           }),
         );
-        isFirstMessage = false;
         rl.prompt();
       } else {
         wsc.send(

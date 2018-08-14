@@ -64,7 +64,7 @@ function broadcast(currentClient, message) {
 }
 
 function isCommand(message) {
-  return message.split('')[0] === '/' && message.length > 1;
+  return message.split('')[0] === '/';
 }
 
 async function main() {
@@ -79,25 +79,20 @@ async function main() {
 
     client.on('close', async () => {
       clients.remove(client);
-      console.log('client', client.username);
+      console.log('client removed: ', client.username);
       await Routing.route(op.deleteUser, client.username);
     });
 
     client.on('message', async data => {
-      console.log('data: ', data, data.toString('utf8'));
-      return;
-
       data = JSON.parse(data);
-      if (data) console.log('message', data);
+
       if (client.messagesSent === 0) {
         client.messagesSent += 1;
         data.ip = req.connection.remoteAddress;
+
         const isValid = await Routing.route(op.validateUser, data);
 
-        if (isValid) {
-          client.username = data.user.username;
-          client.isValid = true;
-        } else {
+        if (!isValid) {
           clients.remove(client);
           client.send(
             JSON.stringify({
@@ -109,6 +104,9 @@ async function main() {
 
           return client.close();
         }
+
+        client.username = data.user.username;
+        client.isValid = true;
       }
 
       if (isCommand(data.message)) {

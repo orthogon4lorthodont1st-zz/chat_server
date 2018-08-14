@@ -13,7 +13,7 @@ const bodyParser = require('body-parser');
 const MongoDB = require('./db/index.js');
 const Routing = require('./routing/actions.js');
 const CommandRouting = require('./routing/commands.js');
-const op = require('./opNames');
+const op = require('./routing/opNames.js');
 const routes = require('./routing/httpRoutes.js');
 const fileUploads = require('./services/fileUploads');
 

@@ -5,6 +5,18 @@ cert.pem
 
 # TODO:
 
+
+## //////////////////////////////// ##
+
+## IN PROGRESS
+## /send FILEPATH USER   **
+
+
+# - finish the send file on server to
+# - hand send file errors e.g. path
+
+## //////////////////////////////// ##
+
 # /exit               - Exit the chat.
 # /msg USER MESSAGE   - Send MESSAGE to USER.
 # /names              - List users who are connected.
@@ -17,4 +29,4 @@ cert.pem
 # /kick USER
 # /email EMAIL MESSAGE
 # /text NUMBER MESSAGE
-# /send FILEPATH USER   **
+
